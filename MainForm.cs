@@ -127,7 +127,6 @@ namespace CutinTableEditor
             startInfo.CreateNoWindow = true;
             startInfo.FileName = $@"{Path.GetDirectoryName(Assembly.GetEntryAssembly().Location)}\Dependencies\P5CutinTool.exe";
             startInfo.Arguments = $@" unpack ""{InputFolder.FileName}"" ""{ OutputFolder.FileName}""";
-            MessageBox.Show(startInfo.Arguments);
 
             Process.Start(startInfo);
         }
@@ -165,7 +164,6 @@ namespace CutinTableEditor
             startInfo.CreateNoWindow = true;
             startInfo.FileName = $@"{Path.GetDirectoryName(Assembly.GetEntryAssembly().Location)}\Dependencies\P5CutinTool.exe";
             startInfo.Arguments = $@" pack ""{InputFolder.FileName}"" ""{ OutputFolder.FileName}""";
-            MessageBox.Show(startInfo.Arguments);
 
             Process.Start(startInfo);
         }
