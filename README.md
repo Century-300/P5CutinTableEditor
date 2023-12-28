@@ -1,3 +1,4 @@
+# P5 Cutin Table Editor
 A GUI made for displaying and editing cutin textures and data tables from Persona 5 Royal and Persona 5.
 
 Currently supports:
