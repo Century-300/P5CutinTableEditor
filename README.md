@@ -1,6 +1,8 @@
 # P5 Cutin Table Editor
 A GUI made for displaying and editing cutin textures and data tables from Persona 5 Royal and Persona 5.
 
+![cteprev](https://github.com/Century-300/P5CutinTableEditor/assets/74802102/7989acb5-bb5d-40ae-b13c-9a1ef7357ef6)
+
 Currently supports:
 
 - Unpacking/Repacking cutin textures. (Using CelestialAmber's CutinTool)
