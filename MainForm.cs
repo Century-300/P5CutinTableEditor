@@ -19,6 +19,7 @@ using System.Windows.Forms;
 using Amicitia.IO;
 using Pfim;
 using Amicitia.IO.Binary;
+using P5CutinTool;
 
 namespace CutinTableEditor
 {
@@ -54,17 +55,14 @@ namespace CutinTableEditor
         public string fileMagic;
         public byte[] headerArray = new byte[38];
 
-
-
+        PictureBox eyePicture = new PictureBox() { SizeMode = PictureBoxSizeMode.Normal, BackColor = Color.Transparent  };
+        
         public MainForm()
         {
             InitializeComponent();
-            this.pictureBox1.Controls.Add(BaseFrame);   //Adds base frame to an empty picture box (background)
-            BaseFrame.Location = new Point(0, 0);
-            BaseFrame.BackColor = Color.Transparent;
-            this.BaseFrame.Controls.Add(eyePicture);   //Adds eye frame picture to base frame to have working transparency
-            eyePicture.Location = new Point(0, 0);
-            eyePicture.BackColor = Color.Transparent;
+            pnl_PictureBoxContainer.Controls.Add(eyePicture);
+            eyePicture.Parent = pictureBox_BaseImage;
+            eyePicture.BringToFront();
 
             //Disable buttons and set dark mode by default
             VisualMode(darkMode);
@@ -80,8 +78,43 @@ namespace CutinTableEditor
             nameTextBox.Enabled = false;
             copyCoordsSM.Enabled = false;
             pasteCoordsSM.Enabled = false;
+            scaleMenu.SelectedIndex = 0;
+#if DEBUG
+            modeComboBox.SelectedIndex = 0; //P5RPC
+            scaleMenu.SelectedIndex = 2;
+            tablePath = @"D:\CPK\BASE.CPK_unpacked\CUTIN\TABLE\0_MAIN_0\CUTINMAIN_0_02_07.DAT";
+            OpenTableDat();
 
+            framePath = @"D:\CPK\BASE.CPK_unpacked\CUTIN\UTARC\0_MAIN_0_extracted\CUTINMAIN_0_02_07.000-0.dds";
+            LoadFrames(orient);
+            inverseButton.Enabled = true;
+            frameDisp = true;
+#endif
+        }
 
+        private Bitmap ScaleBitmap(Bitmap bmp)
+        {
+            int selectedScale = 100;
+
+            if (scaleMenu.SelectedItem.ToString() != "")
+                selectedScale = Convert.ToInt32(scaleMenu.SelectedItem.ToString());
+
+            return new Bitmap(bmp, new Size((int)Math.Ceiling((double)bmp.Width * ((double)selectedScale / (double)100)), (int)Math.Ceiling(((double)bmp.Height * ((double)selectedScale / (double)100)))));
+        }
+
+        private void updateEyeFrame()
+        {
+            eyePicture.Location = ScalePoint(Convert.ToDouble(ePosX), Convert.ToDouble(ePosY));
+        }
+
+        private Point ScalePoint(double x, double y)
+        {
+            int selectedScale = 100;
+
+            if (scaleMenu.SelectedItem.ToString() != "")
+                selectedScale = Convert.ToInt32(scaleMenu.SelectedItem.ToString());
+
+            return new Point((int)Math.Ceiling(x * ((double)selectedScale / (double)100)), (int)Math.Ceiling(y * ((double)selectedScale / (double)100)));
         }
 
         public class CutinData  //Entry structure for cutin data
@@ -120,15 +153,9 @@ namespace CutinTableEditor
             if (OutputFolder.ShowDialog() != CommonFileDialogResult.Ok || OutputFolder.FileName.Length == 0)
                 return;
 
-
             // Unpacking Cutins with Cutin Tool
-            ProcessStartInfo startInfo = new ProcessStartInfo();
-            startInfo.UseShellExecute = false;
-            startInfo.CreateNoWindow = true;
-            startInfo.FileName = $@"{Path.GetDirectoryName(Assembly.GetEntryAssembly().Location)}\Dependencies\P5CutinTool.exe";
-            startInfo.Arguments = $@" unpack ""{InputFolder.FileName}"" ""{ OutputFolder.FileName}""";
-
-            Process.Start(startInfo);
+            P5CutinTool.Program.Main(new string[] { "unpack", InputFolder.FileName, OutputFolder.FileName });
+            MessageBox.Show("Done unpacking cutins!");
         }
 
         private void RepackButton_Click(object sender, EventArgs e)
@@ -157,15 +184,9 @@ namespace CutinTableEditor
             if (OutputFolder.ShowDialog() != CommonFileDialogResult.Ok || OutputFolder.FileName.Length == 0)
                 return;
 
-
             // Repacking Cutins with Cutin Tool
-            ProcessStartInfo startInfo = new ProcessStartInfo();
-            startInfo.UseShellExecute = false;
-            startInfo.CreateNoWindow = true;
-            startInfo.FileName = $@"{Path.GetDirectoryName(Assembly.GetEntryAssembly().Location)}\Dependencies\P5CutinTool.exe";
-            startInfo.Arguments = $@" pack ""{InputFolder.FileName}"" ""{ OutputFolder.FileName}""";
-
-            Process.Start(startInfo);
+            P5CutinTool.Program.Main(new string[] { "pack", InputFolder.FileName, OutputFolder.FileName });
+            MessageBox.Show("Done repacking cutins!");
         }
 
         private void OpenFrames_Click(object sender, EventArgs e)
@@ -219,9 +240,6 @@ namespace CutinTableEditor
                 eyeHeight = baseDDS.DDSHeight();
                 eyeFrames.Add(frameBitmap);
             }
-
-            InitializeBaseFrame();
-            InitializeEyeFrame();
         }
 
         private void OpenTable_Click(object sender, EventArgs e)
@@ -235,6 +253,11 @@ namespace CutinTableEditor
 
             tablePath = openTable.FileName; //Gets filename from the selected image 
 
+            OpenTableDat();
+        }
+
+        private void OpenTableDat()
+        {
             //Clear data lists and frame counts
             entryNames.Clear();
             entryListBox.Items.Clear();
@@ -316,6 +339,7 @@ namespace CutinTableEditor
             numPosX.Enabled = false;
             numPosY.Enabled = false;
             this.eyePicture.Image = null;
+            eyePicture.Size = new Size(1,1);
             entryCombo.SelectedIndex = cutinDataList[entryListBox.SelectedIndex].type;
             nameTextBox.Text = cutinDataList[entryListBox.SelectedIndex].name;
 
@@ -330,7 +354,7 @@ namespace CutinTableEditor
                 if (cutinDataList[entryListBox.SelectedIndex].type == 1 && frameDisp == true)
                 {
                     //Replaces face frames in pictureBox when scrolling through the listBox
-                    this.BaseFrame.Image = faceFrames[entryListBox.SelectedIndex];
+                    pictureBox_BaseImage.Image = ScaleBitmap(faceFrames[entryListBox.SelectedIndex]);
                 }
 
                 if (cutinDataList[entryListBox.SelectedIndex].type == 4 && frameDisp == true)
@@ -356,28 +380,32 @@ namespace CutinTableEditor
                                 ePosX = cutinDataList[entryListBox.SelectedIndex].posX;
                                 ePosY = cutinDataList[entryListBox.SelectedIndex].posY;
                                 updateEyeFrame();
-                                this.eyePicture.Image = eyeFrames[entryListBox.SelectedIndex - faceCount];
+                                this.eyePicture.Image = ScaleBitmap(eyeFrames[entryListBox.SelectedIndex - faceCount]);
+                                eyePicture.Size = eyePicture.Image.Size;
                             }
                             if (isP54K == true)
                             {
                                 ePosX = cutinDataList[entryListBox.SelectedIndex].posX;
                                 ePosY = cutinDataList[entryListBox.SelectedIndex].posY;
                                 updateEyeFrame();
-                                this.eyePicture.Image = eyeFrames[entryListBox.SelectedIndex - faceCount];
+                                this.eyePicture.Image = ScaleBitmap(eyeFrames[entryListBox.SelectedIndex - faceCount]);
+                                eyePicture.Size = eyePicture.Image.Size;
                             }
                             if (isP5R == true)  //For P5R PS4/Switch, coords * 0.6667
                             {
                                 ePosX = Convert.ToInt32(cutinDataList[entryListBox.SelectedIndex].posX * 0.6667);
                                 ePosY = Convert.ToInt32(cutinDataList[entryListBox.SelectedIndex].posY * 0.6667);
                                 updateEyeFrame();
-                                this.eyePicture.Image = eyeFrames[entryListBox.SelectedIndex - faceCount];
+                                this.eyePicture.Image = ScaleBitmap(eyeFrames[entryListBox.SelectedIndex - faceCount]);
+                                eyePicture.Size = eyePicture.Image.Size;
                             }
                             if (isP5RPC == true)    //For P5RPC, coords / 3
                             {
                                 ePosX = Convert.ToInt32(cutinDataList[entryListBox.SelectedIndex].posX * 0.6667);
                                 ePosY = Convert.ToInt32(cutinDataList[entryListBox.SelectedIndex].posY * 0.6667);
                                 updateEyeFrame();
-                                this.eyePicture.Image = eyeFrames[entryListBox.SelectedIndex - faceCount];
+                                this.eyePicture.Image = ScaleBitmap(eyeFrames[entryListBox.SelectedIndex - faceCount]);
+                                eyePicture.Size = eyePicture.Image.Size;
                             }
                             break;
                         case "001":
@@ -387,28 +415,32 @@ namespace CutinTableEditor
                                 ePosX = 872 - cutinDataList[entryListBox.SelectedIndex].posX - eyeWidth;
                                 ePosY = cutinDataList[entryListBox.SelectedIndex].posY;
                                 updateEyeFrame();
-                                this.eyePicture.Image = eyeFrames[entryListBox.SelectedIndex - faceCount];
+                                this.eyePicture.Image = ScaleBitmap(eyeFrames[entryListBox.SelectedIndex - faceCount]);
+                                eyePicture.Size = eyePicture.Image.Size;
                             }
                             if (isP54K == true)
                             {
                                 ePosX = 872 - cutinDataList[entryListBox.SelectedIndex].posX - eyeWidth;
                                 ePosY = cutinDataList[entryListBox.SelectedIndex].posY;
                                 updateEyeFrame();
-                                this.eyePicture.Image = eyeFrames[entryListBox.SelectedIndex - faceCount];
+                                this.eyePicture.Image = ScaleBitmap(eyeFrames[entryListBox.SelectedIndex - faceCount]);
+                                eyePicture.Size = eyePicture.Image.Size;
                             }
                             if (isP5R == true)
                             {
                                 ePosX = 872 - Convert.ToInt32(cutinDataList[entryListBox.SelectedIndex].posX * 0.6667) - eyeWidth;
                                 ePosY = Convert.ToInt32(cutinDataList[entryListBox.SelectedIndex].posY * 0.6667);
                                 updateEyeFrame();
-                                this.eyePicture.Image = eyeFrames[entryListBox.SelectedIndex - faceCount];
+                                this.eyePicture.Image = ScaleBitmap(eyeFrames[entryListBox.SelectedIndex - faceCount]);
+                                eyePicture.Size = eyePicture.Image.Size;
                             }
                             if (isP5RPC == true)
                             {
                                 ePosX = 872 - Convert.ToInt32(cutinDataList[entryListBox.SelectedIndex].posX * 0.6667) - eyeWidth;
                                 ePosY = Convert.ToInt32(cutinDataList[entryListBox.SelectedIndex].posY * 0.6667);
                                 updateEyeFrame();
-                                this.eyePicture.Image = eyeFrames[entryListBox.SelectedIndex - faceCount];
+                                this.eyePicture.Image = ScaleBitmap(eyeFrames[entryListBox.SelectedIndex - faceCount]);
+                                eyePicture.Size = eyePicture.Image.Size;
                             }
                             break;
                         default:
